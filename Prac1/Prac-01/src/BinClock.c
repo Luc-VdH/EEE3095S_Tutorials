@@ -5,8 +5,8 @@
  * Further Modified By: Mark Njoroge 
  *
  * 
- * <STUDNUM_1> <STUDNUM_2>
- * Date
+ * <VHNLUC001> <MCKSAB001>
+ * 17/08/2021
 */
 
 #include <signal.h> //for catching signals
@@ -30,9 +30,10 @@ int HH,MM,SS;
 void CleanUp(int sig){
 	printf("Cleaning up\n");
 
-    digitalWrite(LED, LOW);
 	//Set LED to low then input mode
 	//Logic here
+        digitalWrite(LED, LOW);
+	pinMode(LED, INPUT);
 
 
 	for (int j=0; j < sizeof(BTNS)/sizeof(BTNS[0]); j++) {
@@ -67,16 +68,11 @@ void initGPIO(void){
 		pinMode(BTNS[j], INPUT);
 		pullUpDnControl(BTNS[j], PUD_UP);
 	}
-
-    //pinMode(BTNS[0], INPUT);
-    //pinMode(BTNS[1], INPUT);
-    //pullUpDnControl(BTNS[0], PUD_UP);
-    //pullUpDnControl(BTNS[1], PUD_UP);
 	
 	//Attach interrupts to Buttons
+	//Write your logic here
 	wiringPiISR(BTNS[0], INT_EDGE_RISING, &minInc);
 	wiringPiISR(BTNS[1], INT_EDGE_RISING, &hourInc);
-	//Write your logic here
 	
 
 
@@ -120,10 +116,7 @@ int main(void){
 		}		
 
 		//Toggle Seconds LED
-		//Write your logic here
-		//if(digitalRead(BTNS[0]) == HIGH){
-		//		minInc();
-		//}		
+		//Write your logic here		
 		// Print out the time we have stored on our RTC
 		printf("The current time is: %02d:%02d:%02d\n", hours, mins, secs);
 
