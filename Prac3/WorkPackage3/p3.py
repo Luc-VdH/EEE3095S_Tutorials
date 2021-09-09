@@ -10,7 +10,6 @@ end_of_game = None  # set if the user wins or ends the game
 guess = 0
 value = 0
 guess_count = 0
-prev_time = 0
 
 # DEFINE THE PINS USED HERE
 LED_value = [11, 13, 15]
@@ -40,6 +39,8 @@ def welcome():
 def menu():
     global end_of_game
     global value
+    global guess
+    global guess_count
     option = input("Select an option:   H - View High Scores     P - Play Game       Q - Quit\n")
     option = option.upper()
     if option == "H":
@@ -56,6 +57,15 @@ def menu():
         while not end_of_game:
             pass
         end_of_game = None
+        if value == guess:
+            print("Well done! You won the game with a guess count of", guess_count, "!")
+            save_scores()
+        else:
+            print("You're final guess was incorrect.")
+        guess_count = 0
+        guess = 0
+        value = 0
+
     elif option == "Q":
         print("Come back soon!")
         exit()
@@ -65,20 +75,28 @@ def menu():
 
 def display_scores(count, raw_data):
     # print the scores to the screen in the expected format
-    print("There are {} scores. Here are the top 3!".format(count))
-    # print out the scores in the required format
-    names =[]
-    scores=[]
-    for i in range(len(raw_data)):
-        name=""
-        if((i+1)%4==0):
-            scores+=list(raw_data[i]);
-        else:
-            for j in range(3):
-                name+=raw_data[j];
-            names+=list(name);
-    for i in range(4):
-        print((i+1)," - {} took {} guesses".format(name[i],scores[i]))
+    if count != 0:
+        print("There are {} scores. Here are the top 3!".format(count))
+        # print out the scores in the required format
+        names =[]
+        scores=[]
+        name = ""
+        i = 0
+        while i <len(raw_data):
+            if((i+1)%4==0):
+                scores.append(raw_data[i])
+                i += 1
+            else:
+                for j in range(3):
+                    name += str(raw_data[i+j])
+                i += 3
+                names.append(name)
+                name = ""
+        print(names)
+        for i in range(3):
+            print((i+1)," - {} took {} guesses".format(str(names[i]),str(scores[i])))
+    else:
+        print("There are {} scores.".format(count))
     
 
 
@@ -101,7 +119,7 @@ def setup():
 
     pb = GPIO.PWM(buzzer, 1)
     pb.start(0)
-    pled = GPIO.PWM(LED_accuracy, 40)
+    pled = GPIO.PWM(LED_accuracy, 1000)
     pled.start(0)
 
     # Setup debouncing and callbacks
@@ -112,15 +130,18 @@ def setup():
 def fetch_scores():
     # get however many scores there are
     score_count = None
-    score_count= eeprom.read_byte(0)
+    score_count= int(eeprom.read_byte(0))
     # Get the scores
-    scores= eeprom.read_block(1,12)
-    # convert the codes back to ascii
-    for i in range(len(scores)):
-        if((i+1)%4==0):
-            pass
-        else:
-            scores[i]= chr(scores[i])
+    scores = []
+    if score_count != 0:
+        scores= eeprom.read_block(1,4*score_count)
+        
+        # convert the codes back to ascii
+        for i in range(len(scores)):
+            if((i+1)%4==0):
+                pass
+            else:
+                scores[i]= chr(scores[i])
     # return back the results
     return score_count, scores
 
@@ -130,35 +151,36 @@ def save_scores():
     global guess_count
 
     # fetch scores
-    score_count= eeprom.read_byte(0)
+    score_count= int(eeprom.read_byte(0))
     fInfo= eeprom.read_block(1,4*score_count)
     # include new score
     letters = []
-    user = input("Please enter three letters as your username")
-    while len(user) > 3:
-        user = input("Please enter three letters as your username")
+    user = input("Please enter three letters as your username: ")
+    while len(user) != 3:
+        user = input("Please enter three letters as your username: ")
     letters = list(user)
-
+    print(fInfo)
     # sort
     scores=[]
     for i in range(len(fInfo)):
         if((i+1)%4==0):
-            scores+=list(fInfo)
+            scores.append(fInfo[i])
     position=len(scores)
     for i in range(len(scores)):
         if scores[i] < guess_count :
             position = i
-
     position=position*4
     for i in range(len(letters)):
-        fInfo.insert(position,letters[i])
+        print(ord(letters[i]))
+        fInfo.insert(position, ord(letters[i]))
         position += 1
     fInfo.insert(position,guess_count)
-
     # update total amount of scores
     score_count += 1
     # write new scores
-    eeprom.write_byte(0,score_count)
+    print(score_count)
+    print(fInfo)
+    eeprom.write_block(0, [score_count])
     eeprom.write_block(1,fInfo)
     
 
@@ -242,14 +264,16 @@ def accuracy_leds():
     global value
     global pled
     dc = 0 
-    if guess == value:
-        dc == 100
-    elif guess < value:
-        dc = (guess/value)*100
-    elif guess > value:
-        dc = ((8-guess)/(8-value))*100
+    dif = abs(guess - value)
+    # if guess < value:
+    #     dc = (guess/value)*100
+    # elif guess > value:
+    #     dc = ((8-guess)/(8-value))*100
+    # else:
+    #     dc = 100
+    dc = ((7-dif)/7)*100
     print(dc)
-    pled.ChangeDutyCycle(dc/2)
+    pled.ChangeDutyCycle(dc)
 
 # Sound Buzzer
 def trigger_buzzer():
@@ -265,13 +289,13 @@ def trigger_buzzer():
     dif = abs(value - guess)
     if dif == 3:
         pb.ChangeDutyCycle(1)
-        pb.ChangeFrequency(0.5)
+        pb.ChangeFrequency(1)
     elif dif == 2:
         pb.ChangeDutyCycle(1)
-        pb.ChangeFrequency(1)
+        pb.ChangeFrequency(2)
     elif dif == 1:
         pb.ChangeDutyCycle(1)
-        pb.ChangeFrequency(2)
+        pb.ChangeFrequency(4)
     else:
         pb.ChangeDutyCycle(0)
         pb.ChangeFrequency(1)
