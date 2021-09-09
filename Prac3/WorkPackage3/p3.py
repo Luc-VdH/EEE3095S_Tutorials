@@ -41,6 +41,10 @@ def menu():
     global value
     global guess
     global guess_count
+    global pb
+    global pled
+
+
     option = input("Select an option:   H - View High Scores     P - Play Game       Q - Quit\n")
     option = option.upper()
     if option == "H":
@@ -54,6 +58,8 @@ def menu():
         print("Use the buttons on the Pi to make and submit your guess!")
         print("Press and hold the guess button to cancel your game")
         value = generate_number()
+        pb.start(0)
+        pled.start(0)
         while not end_of_game:
             pass
         end_of_game = None
@@ -92,7 +98,6 @@ def display_scores(count, raw_data):
                 i += 3
                 names.append(name)
                 name = ""
-        print(names)
         for i in range(3):
             print((i+1)," - {} took {} guesses".format(str(names[i]),str(scores[i])))
     else:
@@ -118,9 +123,7 @@ def setup():
     GPIO.setup(buzzer, GPIO.OUT)
 
     pb = GPIO.PWM(buzzer, 1)
-    pb.start(0)
     pled = GPIO.PWM(LED_accuracy, 1000)
-    pled.start(0)
 
     # Setup debouncing and callbacks
     pass
@@ -152,13 +155,15 @@ def save_scores():
 
     # fetch scores
     score_count= int(eeprom.read_byte(0))
+    newcount = score_count+1
+    # update total amount of scores
+    eeprom.write_block(0, [newcount])
     fInfo= eeprom.read_block(1,4*score_count)
 
     # include new score
     user = input("Please enter three letters as your username: ")
     while len(user) != 3:
         user = input("Please enter three letters as your username: ")
-    print(fInfo)
 
     # sort
     scores=[]
@@ -169,29 +174,27 @@ def save_scores():
         if count==3:
             userScore.append(name)
             userScore.append(fInfo[i])
-            score.append(userScore)
+            scores.append([name, fInfo[i]])
             count=0
             name=""
+            userScore = []
         else:
             name += chr(fInfo[i])
             count += 1
+    scores.append([user, guess_count])
     scores.sort(key=lambda x: x[1])
-    data_to_write = []
     for i, score in enumerate(scores):
+        data_to_write = []
         # get the string
         for letter in score[0]:
             data_to_write.append(ord(letter))
         data_to_write.append(score[1])
+
+        # write new scores
+        eeprom.write_block(1+i,data_to_write)
         
 
-    # update total amount of scores
-    score_count += 1
-
     # write new scores
-    print(score_count)
-    print(fInfo)
-    eeprom.write_block(0, [score_count])
-    eeprom.write_block(1,data_to_write)
     
 
 
@@ -282,7 +285,6 @@ def accuracy_leds():
     # else:
     #     dc = 100
     dc = ((7-dif)/7)*100
-    print(dc)
     pled.ChangeDutyCycle(dc)
 
 # Sound Buzzer
