@@ -153,35 +153,45 @@ def save_scores():
     # fetch scores
     score_count= int(eeprom.read_byte(0))
     fInfo= eeprom.read_block(1,4*score_count)
+
     # include new score
-    letters = []
     user = input("Please enter three letters as your username: ")
     while len(user) != 3:
         user = input("Please enter three letters as your username: ")
-    letters = list(user)
     print(fInfo)
+
     # sort
     scores=[]
+    count=0
+    userScore=[]
+    name=""
     for i in range(len(fInfo)):
-        if((i+1)%4==0):
-            scores.append(fInfo[i])
-    position=len(scores)
-    for i in range(len(scores)):
-        if scores[i] < guess_count :
-            position = i
-    position=position*4
-    for i in range(len(letters)):
-        print(ord(letters[i]))
-        fInfo.insert(position, ord(letters[i]))
-        position += 1
-    fInfo.insert(position,guess_count)
+        if count==3:
+            userScore.append(name)
+            userScore.append(fInfo[i])
+            score.append(userScore)
+            count=0
+            name=""
+        else:
+            name += chr(fInfo[i])
+            count += 1
+    scores.sort(key=lambda x: x[1])
+    data_to_write = []
+    for i, score in enumerate(scores):
+        # get the string
+        for letter in score[0]:
+            data_to_write.append(ord(letter))
+        data_to_write.append(score[1])
+        
+
     # update total amount of scores
     score_count += 1
+
     # write new scores
     print(score_count)
     print(fInfo)
     eeprom.write_block(0, [score_count])
-    eeprom.write_block(1,fInfo)
+    eeprom.write_block(1,data_to_write)
     
 
 
