@@ -50,12 +50,12 @@ def print_result():
     global chan2
     n=time.time()-startTime
     seconds= str(round(n,0)) + "s"
-    #sensor output at 0 degrees(V0) is 500V and the temperature co-efficient(Tc) is 10
-    #temp=(Vdata-V0)/Tc
-    voltage = chan1.value * (5/1023.0)
-    t = (voltage - 0.5)
-    temp=(chan1.value-500)/100
-    print("{0:<20} {1:<20} {2:<20}C {3:<20}".format(seconds,chan1.value, t, chan2.value))
+    #sensor output at 0 degrees(V0) is 500mV and Ref voltage of the sensor is 5V and there are 1023 ADC levels
+    #voltage output from the sensor = ADC_VALUE * (REF/LEVELS)
+    voltage = chan1.value * (5.0/1023.0)
+    #temperature: t = Senser voltage - 500mV
+    t = str(round((voltage - 0.5), 2)) + "C"
+    print("{0:<20} {1:<20} {2:<20} {3:<20}".format(seconds,chan1.value, t, chan2.value))
     time.sleep(delay)
     
 if __name__ == "__main__":
